@@ -37,7 +37,6 @@ func TestMain(m *testing.M) {
 	pool = p
 
 	// set up our docker options, specifying the image and so forth
-
 	opts := dockertest.RunOptions{
 		Repository: "postgres",
 		Tag:        "14.5",
@@ -84,7 +83,11 @@ func TestMain(m *testing.M) {
 	// run tests
 	code := m.Run()
 
-	// clean up (stop everything and purge resources)
+	// clean up
+	if err := pool.Purge(resource); err != nil {
+		log.Fatalf("could not purge resource: %s", err)
+	}
+
 	os.Exit(code)
 }
 
@@ -102,4 +105,11 @@ func createTables() error {
 	}
 
 	return nil
+}
+
+func Test_pingDB(t *testing.T) {
+	err := testDB.Ping()
+	if err != nil {
+		t.Error("can't ping database")
+	}
 }
