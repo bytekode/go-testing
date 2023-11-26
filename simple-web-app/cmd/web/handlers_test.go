@@ -21,7 +21,7 @@ func Test_application_handlers(t *testing.T) {
 	}{
 		{"home", "/", http.StatusOK, "/", http.StatusOK},
 		{"404", "/fish", http.StatusNotFound, "/fish", http.StatusNotFound},
-		{"profile", "/user/profile", http.StatusTemporaryRedirect, "/", http.StatusOK},
+		{"profile", "/user/profile", http.StatusOK, "/", http.StatusTemporaryRedirect},
 	}
 
 	routes := app.routes()
