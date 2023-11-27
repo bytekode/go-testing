@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"fmt"
@@ -14,6 +15,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"simple-web-app/pkg/data"
 	"strings"
 	"sync"
 	"testing"
@@ -199,7 +201,7 @@ func Test_app_UploadFiles(t *testing.T) {
 	wg.Add(1)
 
 	// simulate uploading a file using go routine and our writer
-	go simulatePNGUpload("./testdata/uploads/img.png", writer, t, wg)
+	go simulatePNGUpload("./testdata/img.png", writer, t, wg)
 
 	// read from the pipe which receives data
 	request := httptest.NewRequest("POST", "/", pr)
@@ -218,6 +220,7 @@ func Test_app_UploadFiles(t *testing.T) {
 
 	// clean up
 	_ = os.Remove(fmt.Sprintf("./testdata/uploads/%s", uploadedFiles[0].OriginalFileName))
+	wg.Wait()
 }
 
 func simulatePNGUpload(fileToUpload string, writer *multipart.Writer, t *testing.T, wg *sync.WaitGroup) {
@@ -258,4 +261,53 @@ func simulatePNGUpload(fileToUpload string, writer *multipart.Writer, t *testing
 	if err != nil {
 		t.Error(err)
 	}
+}
+
+func Test_app_UploadProfilePic(t *testing.T) {
+	uploadPath = "./testdata/uploads"
+	filePath := "./testdata/img.png"
+
+	// specify a field name for the form
+	fieldName := "file"
+
+	// create a bytes.Buffer to act as request body
+
+	body := new(bytes.Buffer)
+
+	// create a new writer
+	mw := multipart.NewWriter(body)
+
+	file, err := os.Open(filePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	w, err := mw.CreateFormFile(fieldName, filePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := io.Copy(w, file); err != nil {
+		t.Fatal(err)
+	}
+
+	mw.Close()
+
+	req := httptest.NewRequest(http.MethodPost, "/upload", body)
+	req = addContextAndSessionToReq(req, app)
+
+	app.Session.Put(req.Context(), "user", data.User{ID: 1})
+	req.Header.Add("Content-Type", mw.FormDataContentType())
+
+	rr := httptest.NewRecorder()
+
+	handler := http.HandlerFunc(app.UploadProfilePic)
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusSeeOther {
+		t.Errorf("wrong status code")
+	}
+
+	// clean up
+	_ = os.Remove("./testdata/uploads/img.png")
 }
