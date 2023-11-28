@@ -132,6 +132,31 @@
             })
     })
 
+    userBtn.addEventListener("click", function(){
+        const myHeaders = new Headers();
+        myHeaders.append("Content-Type","application/json")
+        myHeaders.append("Authorization","Bearer "+access_token)
+
+        const requestOptions = {
+            method: "GET",
+            headers: myHeaders,
+        }
+
+        fetch(`/users/1`, requestOptions)
+            .then((response) => response.json())
+            .then((data) => {
+                if (data) {
+                    userOutput.innerHTML = JSON.stringify(data, undefined, 4)
+                } else {
+                    setUI(false);
+                }
+            })
+            .catch(error => {
+                userOutput.innerHTML = "Login in first!"
+                console.log(error);
+            });
+    })
+
     function refreshTokens() {
         // send get request which includes the __Host-refresh-token cookie if it exists
 
