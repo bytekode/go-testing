@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -9,6 +10,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/go-chi/chi/v5"
 )
 
 func Test_app_authenticate(t *testing.T) {
@@ -90,5 +93,95 @@ func Test_app_refresh(t *testing.T) {
 			t.Errorf("%s: expected status %d but got %d", test.name, test.expectedStatusCode, rr.Code)
 		}
 		refreshTokenExpiry = oldRefreshTime
+	}
+}
+
+// when running unit test, we are not connecting to database
+func Test_app_userHandlers(t *testing.T) {
+	var tests = []struct {
+		name           string
+		method         string
+		json           string
+		paramID        string
+		handler        http.HandlerFunc
+		expectedStatus int
+	}{
+		{"allUsers", "GET", "", "", app.allUsers, http.StatusOK},
+		{"deleteUser", "DELETE", "", "1", app.deleteUser, http.StatusNoContent},
+		{"deleteUser bad url param", "DELETE", "", "y", app.deleteUser, http.StatusBadRequest},
+		{"getUser valid", "GET", "", "1", app.getUser, http.StatusOK},
+		{"getUser invalid", "GET", "", "100", app.getUser, http.StatusBadRequest},
+		{"getUser bad url param", "GET", "", "y", app.getUser, http.StatusBadRequest},
+
+		{
+			"updateUser valid",
+			"PATCH",
+			`{"id":1,"first_name":"Administrator","last_name":"User","email":"admin@example.com"}`,
+			"",
+			app.updateUser,
+			http.StatusNoContent,
+		},
+		{
+			"updateUser invalid",
+			"PATCH",
+			`{"id":100,"first_name":"Administrator","last_name":"User","email":"admin@example.com"}`,
+			"",
+			app.updateUser,
+			http.StatusBadRequest,
+		},
+		{
+			"updateUser invalid json",
+			"PATCH",
+			`{"id":1,first_name:"Administrator","last_name":"User","email":"admin@example.com"}`,
+			"",
+			app.updateUser,
+			http.StatusBadRequest,
+		},
+		{
+			"insert valid",
+			"PUT",
+			`{"first_name":"Jack","last_name":"Smith","email":"jack@example.com"}`,
+			"",
+			app.insertUser,
+			http.StatusNoContent,
+		},
+		{
+			"insert invalid",
+			"PUT",
+			`{"foo":"bar","first_name":"Jack","last_name":"Smith","email":"jack@example.com"}`,
+			"",
+			app.insertUser,
+			http.StatusBadRequest,
+		},
+		{
+			"insert invalid json",
+			"PUT",
+			`{first_name:"Jack","last_name":"Smith","email":"jack@example.com"}`,
+			"",
+			app.insertUser,
+			http.StatusBadRequest,
+		},
+	}
+
+	for _, test := range tests {
+		var req *http.Request
+		if test.json == "" {
+			req, _ = http.NewRequest(test.method, "/", nil)
+		} else {
+			req, _ = http.NewRequest(test.method, "/", strings.NewReader(test.json))
+		}
+		if test.paramID != "" {
+			chiCtx := chi.NewRouteContext()
+			chiCtx.URLParams.Add("userID", test.paramID)
+			req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, chiCtx))
+		}
+
+		rr := httptest.NewRecorder()
+		handler := http.HandlerFunc(test.handler)
+		handler.ServeHTTP(rr, req)
+
+		if rr.Code != test.expectedStatus {
+			t.Errorf("%s: wrong status retured; expected %d, got %d", test.name, test.expectedStatus, rr.Code)
+		}
 	}
 }
