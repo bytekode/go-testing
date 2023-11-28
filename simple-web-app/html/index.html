@@ -77,12 +77,29 @@
     let tokenDisplay = document.getElementById("token")
     let refreshTokenDisplay = document.getElementById("refresh")
 
+    let refreshRunning = false
+    let refreshTime = new Date();
+    let secondsRemaining = (600 - refreshTime.getSeconds()) * 1000; // every 10 mins
+    // let secondsRemaining = (5 - refreshTime.getSeconds()) * 1000; // every 5 mins
+
     document.addEventListener("DOMContentLoaded", function() {
         // call refreshTokens; this will, by default login the user
         // if the user has a valid non expired __Host-refresh-token cookie
 
         refreshTokens();
     })
+
+    function autoRefresh() {
+        if (!refreshRunning) {
+            setTimeout(function() {
+                if (access_token !== "") {
+                    setInterval(refreshTokens, 10 * 60 * 1000) // every 10 minutes
+                    // setInterval(refreshTokens, 5 * 1000) // every 5 seconds
+                }
+            }, secondsRemaining);
+        }
+        refreshRunning = true
+    }
 
     
     loginBtn.addEventListener("click", function() {
@@ -107,6 +124,7 @@
                     access_token = data.access_token;
                     refresh_token = data.refresh_token;
                     setUI(true);
+                    autoRefresh();
                 }
             })
             .catch(error => {
@@ -128,15 +146,16 @@
                 if (data.access_token) {
                     access_token = data.access_token
                     refresh_token = data.refresh_token
-                    setUI(true)
+                    setUI(true);
+                    autoRefresh();
                 } else {
-                    setUI(false)
+                    setUI(false);
                 }
             })
             .catch(error => {
                 console.log("user is not logged in");
                 console.log(error);
-            })
+            });
     }
 
     function setUI(loggedIn) {
