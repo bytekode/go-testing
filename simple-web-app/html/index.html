@@ -77,6 +77,13 @@
     let tokenDisplay = document.getElementById("token")
     let refreshTokenDisplay = document.getElementById("refresh")
 
+    document.addEventListener("DOMContentLoaded", function() {
+        // call refreshTokens; this will, by default login the user
+        // if the user has a valid non expired __Host-refresh-token cookie
+
+        refreshTokens();
+    })
+
     
     loginBtn.addEventListener("click", function() {
         const payload = {
@@ -106,6 +113,31 @@
                 alert(error)
             })
     })
+
+    function refreshTokens() {
+        // send get request which includes the __Host-refresh-token cookie if it exists
+
+        const requestOptions = {
+            method: "GET",
+            credentials: "include",
+        }
+
+        fetch(`/web/refresh-token`, requestOptions)
+            .then((response) => response.json())
+            .then((data) => {
+                if (data.access_token) {
+                    access_token = data.access_token
+                    refresh_token = data.refresh_token
+                    setUI(true)
+                } else {
+                    setUI(false)
+                }
+            })
+            .catch(error => {
+                console.log("user is not logged in");
+                console.log(error);
+            })
+    }
 
     function setUI(loggedIn) {
         if(loggedIn) {
