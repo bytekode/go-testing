@@ -101,7 +101,19 @@
         refreshRunning = true
     }
 
-    
+    logoutBtn.addEventListener("click", function() {
+        access_token = ""
+        refresh_token = ""
+
+        fetch(`/web/logout`, {method: "GET"})
+            .then((response) => {
+                setUI(false)
+            })
+            .catch(error => {
+                userOutput.innerHTML = error
+            })
+    })
+
     loginBtn.addEventListener("click", function() {
         const payload = {
             email: document.getElementById("email").value,
