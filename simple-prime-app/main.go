@@ -59,7 +59,7 @@ func checkNumbers(scanner *bufio.Scanner) (string, bool) {
 
 	numToCheck, err := strconv.Atoi(scanner.Text())
 	if err != nil {
-		return "Please enter a whole number!", false
+		return "Please enter a whole number or enter q to quit.", false
 	}
 
 	_, msg := isPrime(numToCheck)
